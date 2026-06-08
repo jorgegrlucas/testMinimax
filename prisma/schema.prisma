@@ -1,0 +1,90 @@
+// Prisma schema for People Manager
+// Estilo Netwrix Identity Manager: Person = estado atual, PersonRecord = histórico
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id                String   @id @default(cuid())
+
+  // Informations techniques
+  rpId              String   @unique
+  presenceState     String   @default("UNKNOWN") // PRESENT | ABSENT | PARTIAL | UNKNOWN
+  windowsLogin      String?  @unique
+  isServiceLead     Boolean  @default(false)
+  hiddenInOrga      Boolean  @default(false)
+  teamsException    Boolean  @default(false)
+
+  // Informations personnelles
+  civility          String?  // MR | MME | MLLE
+  lastName          String
+  firstName         String
+  contractStart     DateTime?
+  physicalStart     DateTime?
+  isAbsent          Boolean  @default(false)
+  absenceDisablesAd Boolean  @default(false)
+
+  // Coordonnées (ATUAIS)
+  email             String?  @unique
+  jobDescription    String?
+  employeeType      String?
+  company           String?
+  companyLabel      String?
+  service           String?
+  jobTitle          String?
+  building          String?
+  workplace         String?
+
+  // Self-ref: manager hierárquico
+  managerId         String?
+  manager           Person?  @relation("ManagerReports", fields: [managerId], references: [id])
+  reports           Person[] @relation("ManagerReports")
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  records           PersonRecord[]
+
+  @@index([service])
+  @@index([managerId])
+  @@index([lastName, firstName])
+}
+
+model PersonRecord {
+  id              String   @id @default(cuid())
+  personId        String
+  person          Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // Ficha de poste — snapshot
+  contractDesc    String?
+  employeeType    String?
+  contractType    String?
+  classification  String?
+  accessCard      String?
+  certifiedEmp    Boolean  @default(false)
+  mandatoryCert   String?
+  jobDescription  String?
+
+  employerCompany String?
+  company         String?
+  companyLabel    String?
+  service         String?
+  jobTitle        String?
+  managerId       String?
+
+  positionStart   DateTime
+  positionEnd     DateTime? // null = posto atual
+  building        String?
+  workplace       String?
+  workplaceLabel  String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([personId, positionStart])
+}
